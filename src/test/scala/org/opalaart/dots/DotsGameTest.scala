@@ -1,7 +1,5 @@
 package org.opalaart.dots
 
-import org.junit.Test
-import org.junit.Assert._
 import org.scalatest.FunSpec
 
 class DotsGameTest extends FunSpec {
@@ -57,12 +55,12 @@ class DotsGameTest extends FunSpec {
     it ("should have adjacent dots") {
       val board = new DotsBoard(40,30)
       val dot = board.dot(10,10)
-      assert(dot.adjacent.size==DotsGameRules.adjacent.size)
+      assert(dot.adjacent.size==DotsGameRules.moves.size)
     }
     it ("should have traversable edges") {
       val board = new DotsBoard(40,30)
       val dot = board.dot(10,10)
-      assert(dot.edges.size==DotsGameRules.edges.size)
+      assert(dot.edges.size==DotsGameRules.moves.size)
     }
     it ("should find traversable edge") {
       val board = new DotsBoard(40,30)
@@ -76,11 +74,8 @@ class DotsGameTest extends FunSpec {
   
   describe("A DotsGameRules") {
     
-    it ("should have adjacent set of size 24") {
-      assert(DotsGameRules.adjacent.size==24)
-    }
-    it ("should have traversable set of size 16") {
-      assert(DotsGameRules.edges.size==16)
+    it ("should have moves set of size 24") {
+      assert(DotsGameRules.moves.size==24)
     }
   }
   
@@ -109,11 +104,12 @@ class DotsGameTest extends FunSpec {
     it ("should connect two blue dots with blue edge") {
       val game = new DotsGame(40,30)
       val dot1 = game.takeBlue(2,2)
-      dot1.adjacent foreach (dot => assert(dot.color==BLACK,s"$dot should become BLACK"))
-      Console.println(dot1.adjacent)
+      dot1.adjacent foreach (dot => assert(dot.color==BLACK,s"adjacent $dot should be BLACK"))
       val dot2 = game.takeBlue(3,4)
-      val edge = game.connectBlue(dot1, dot2)
-      assert(edge.color==BLUE,"edge color should become blue")
+	  val edge1 = dot1.edgeTo(dot2).get
+	  assert(edge1.color==BLUE,s"$edge1 color should be BLUE")  
+      val edge2 = game.connectBlue(dot1, dot2)
+      assert(edge2.taken==true,s"$edge2 should be taken")
     }
   }
 

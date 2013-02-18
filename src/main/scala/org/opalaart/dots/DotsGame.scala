@@ -1,7 +1,5 @@
 package org.opalaart.dots
 
-import scala.collection.TraversableLike
-
 trait Color {
   override def toString:String = super.toString.split('.').last.split('$').head+")"
 }
@@ -17,24 +15,32 @@ case class Dot(h:Int, w:Int, private val board:DotsBoard){
   
   lazy val index = board.indexOf(h,w)
   lazy val adjacent:Set[Dot] = board.adjacentOf(h,w) 
-  lazy val edges:Set[Edge] = board.edgesOf(h,w) map (board.createEdge(this,_)) 
+  lazy val edges:Set[Edge] = board.adjacentOf(h,w) map (board.createEdge(this,_)) 
   
   def edgeTo(target:Dot):Option[Edge] = edges.find(edge => edge.target==target)
+
+  def adjustEdges {edges foreach (_.adjust)}
   
   override def toString:String = "Dot("+w+","+h+","+color+")"
 }
 
-case class Edge(source:Dot, target:Dot, var color:Color = WHITE){
+case class Edge(source:Dot, target:Dot, var color:Color = WHITE, var taken:Boolean = false){
   
-  def adjustColor = {
+  def adjust {
     if(color==WHITE){
-      if(source.color==target.color) color = BLACK
+      if(source.color==target.color) {
+	      color = source.color
+      } else if(source.color!=WHITE && source.color!=BLACK && target.color!=WHITE && target.color!=BLACK){
+		  if(source.color!=target.color) color = GRAY
+	  }
     }
-    if(color==BLACK){
-      if(source.color!=WHITE && source.color!=BLACK && target.color!=WHITE && target.color!=BLACK){
-        if(source.color!=target.color) color = GRAY
-      }
-    }
+	adjustSymmetricEdge
+  }
+	
+  def adjustSymmetricEdge {
+	  val symmetricEdge = target.edgeTo(source).get
+	  symmetricEdge.color = color
+	  symmetricEdge.taken = taken
   }
 }
 
@@ -72,11 +78,7 @@ class DotsBoard(height:Int, width:Int) extends Traversable[Dot]{
   def indexOf(h:Int,w:Int) = h*width + w
   def locate(index:Int):(Int,Int) = (index/width,index%width)
   
-  def adjacentOf(h:Int,w:Int):Set[Dot] = DotsGameRules.adjacent map {
-    case (dh,dw) => this(h+dh,w+dw) 
-  } filter (_.isDefined) map (_.get)
-  
-  def edgesOf(h:Int,w:Int):Set[Dot] = DotsGameRules.edges map {
+  def adjacentOf(h:Int,w:Int):Set[Dot] = DotsGameRules.moves map {
     case (dh,dw) => this(h+dh,w+dw) 
   } filter (_.isDefined) map (_.get)
   
@@ -88,10 +90,6 @@ class DotsBoard(height:Int, width:Int) extends Traversable[Dot]{
     edge
   }
   
-  def isEdgeWhiteOrBlack(edge:Edge):Boolean = edge.color==WHITE || edge.color==BLACK
-  
-  def adjustColorsOf(edgeSet:Set[Edge]):Unit = edgeSet filter isEdgeWhiteOrBlack foreach (_.adjustColor)
-  
   //extends trait Traversable
   override val size = width*height
   def foreach[U](f: Dot => U): Unit = {
@@ -102,14 +100,7 @@ class DotsBoard(height:Int, width:Int) extends Traversable[Dot]{
 
 object DotsGameRules {
   
-  val edges:Set[(Int,Int)] = Set(
-      (0,1),(1,2),(1,1),(2,1),
-      (1,0),(-1,2),(-1,1),(-2,1),
-      (-1,0),(-2,-1),(-1,-1),(-1,-2),
-      (0,-1),(1,-2),(1,-1),(2,-1)
-  ) 
-  
-  val adjacent:Set[(Int,Int)] = Set(
+  val moves:Set[(Int,Int)] = Set(
       (-1,-1), (-2,0), (0,2), (2,-1), 
       (-2,1), (2,0), (1,-2), (1,1), (0,-2), 
       (1,-1), (-1,0), (-2,-1), (2,2), (-1,2), 
@@ -131,7 +122,7 @@ class DotsGame(height:Int,width:Int) {
     counter = counter+1
     dot.color = color
     dot.adjacent filter (_.color==WHITE) foreach (_.color=BLACK)
-    board.adjustColorsOf(dot.edges)
+    dot.adjustEdges
     dot
   }
   
@@ -150,9 +141,10 @@ class DotsGame(height:Int,width:Int) {
     val edge = source.edgeTo(target).getOrElse(
         throw new IllegalArgumentException(s"$target not reachable from $source")
     )
-    assert(edge.color==WHITE || edge.color==BLACK, s"$edge should be BLACK")
+    assert(edge.color==color, s"$edge should be $color")
     //TODO check crossings
-    edge.color = color
+    edge.taken = true
+	edge.adjustSymmetricEdge
     edge
   }
   
