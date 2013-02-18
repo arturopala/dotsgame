@@ -73,12 +73,26 @@ class DotsGameTest extends FunSpec {
 	}
 
 	describe("A DotsGameRules") {
+	    
+	    import DotsGameRules._
 
 		it("should have moves set of size 24") {
-			assert(DotsGameRules.moves.size == 24)
+			assert(moves.size == 24)
 		}
 		it("should have edges set of size 16") {
-			assert(DotsGameRules.edges.size == 16)
+			assert(edges.size == 16)
+		}
+		it("should have crossings") {
+		    assert(crossings.size==16)
+		    assert(edges.forall(edge => crossings.get(edge).isDefined))
+			assert(crossings((1,0)).size==2)
+			assert(crossings((1,1)).size==5)
+			assert(crossings((1,2)).size==9)
+			assert(crossings((2,1)).size==9)
+			assert(crossings(r(1,0)).size==2)
+			assert(crossings(r(1,1)).size==5)
+			assert(crossings(r(1,2)).size==9)
+			assert(crossings(r(2,1)).size==9)
 		}
 	}
 
@@ -119,6 +133,19 @@ class DotsGameTest extends FunSpec {
 			val edge2 = dot3.edgeTo(dot2).get
 			assert(edge2.taken == true, s"$edge2 should be taken")
 			assert(edge2.color == BLUE, s"$edge2 should be BLUE")
+		}
+		it("should not connect two red dots across blue edge") {
+			val game = new DotsGame(40, 30)
+			val dot1 = game.takeBlue(2, 2)
+			val dot2 = game.takeBlue(4, 4)
+			val edge1 = game.connectBlue(dot1, dot2)
+			val dot3 = game.board.dot(3, 3)
+			val edge2 = dot3.edgeTo(dot2).get
+			val dot4 = game.takeRed(3, 2)
+			val dot5 = game.takeRed(2, 3)
+			intercept[AssertionError]{
+			    val edge3 = game.connectRed(dot4, dot5)
+			}
 		}
 	}
 

@@ -31,9 +31,9 @@ case class Dot(h: Int, w: Int, private val board: DotsBoard) {
 }
 
 case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: Boolean = false) {
-
+    
 	def adjust {
-		if (color == WHITE || color==BLACK) {
+		if (color==WHITE || color==BLACK) {
 			if (source.color == target.color) {
 				color = source.color
 			} else if (source.color != WHITE && source.color != BLACK && target.color != WHITE && target.color != BLACK) {
@@ -47,6 +47,50 @@ case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: B
 		val symmetricEdge = target.edgeTo(source).get
 		symmetricEdge.color = color
 		symmetricEdge.taken = taken
+	}
+	
+	def markCrossings {
+	    val vector:Vector = source.vectorTo(target)
+	    val crossings = DotsGameRules.crossings(vector)
+	    crossings foreach {
+	        case (v1,v2) => {
+	           source.dotAtOffset(v1) match {
+	                 case Some(dot1) => {
+	                     dot1.dotAtOffset(v2) match {
+	                         case Some(dot2) => {
+	                           val edge = dot1.edgeTo(dot2).get
+	                           if(edge.color==WHITE || edge.color==BLACK || (color!=GRAY && !taken)){
+	                              edge.color = GRAY  
+	                           } 	   
+	                         }
+	                         case None => Unit
+	                     }
+	                 }
+	                 case None => Unit
+	           }
+	        }
+	    }
+	}
+	
+	def checkCrossings:Boolean = {
+	    val vector:Vector = source.vectorTo(target)
+	    val crossings = DotsGameRules.crossings(vector)
+	    crossings forall {
+	        case (v1,v2) => {
+	           source.dotAtOffset(v1) match {
+	                 case Some(dot1) => {
+	                     dot1.dotAtOffset(v2) match {
+	                         case Some(dot2) => {
+	                           val edge = dot1.edgeTo(dot2).get
+	                           !edge.taken	   
+	                         }
+	                         case None => true
+	                     }
+	                 }
+	                 case None => true
+	           }
+	        }
+	    }
 	}
 }
 
@@ -131,12 +175,41 @@ object DotsGameRules {
 	)
 	
 	val crossings: Map[Vector,Set[(Vector,Vector)]] = Map(
-		(1,0) -> Set(((0,-1),(1,2)),((0,1),(1,-2))),
-		(-1,0) -> Set(((0,-1),(-1,2)),((0,1),(-1,-2))),
-		(0,1) -> Set(((-1,0),(2,1)),((1,0),(-2,1))),
-		(0,-1) -> Set(((-1,0),(2,-1)),((1,0),(-2,-1)))
+	        (-1,-1) -> Set(((0,-1),(-2,1)), ((-1,0),(1,-2)), ((-1,0),(1,-1)), ((-1,0),(2,-1)), ((0,-1),(-1,2))), 
+	        ( 2,-1) -> Set(((1,-1),(1,1)), ((2,0),(-1,-2)), ((1,0),(-1,-2)), ((1,-1),(2,1)), ((0,-1),(1,1)), ((1,0),(1,2)), ((0,-1),(2,1)), ((0,-1),(1,2)), ((1,-1),(1,2))), 
+	        (-2, 1) -> Set(((-1,0),(-1,-2)), ((-1,1),(-2,-1)), ((0,1),(-2,-1)), ((-2,0),(1,2)), ((0,1),(-1,-2)), ((-1,0),(1,2)), ((-1,1),(-1,-1)), ((-1,1),(-1,-2)), ((0,1),(-1,-1))), 
+	        ( 1,-2) -> Set(((1,0),(-1,-2)), ((1,-1),(-1,-2)), ((0,-1),(2,1)), ((1,0),(-1,-1)), ((1,-1),(-2,-1)), ((1,-1),(-1,-1)), ((0,-1),(-2,-1)), ((1,0),(-2,-1)), ((0,-2),(2,1))), 
+	        ( 1, 1) -> Set(((1,0),(-1,1)), ((1,0),(-2,1)), ((0,1),(1,-2)), ((1,0),(-1,2)), ((0,1),(2,-1))), 
+	        ( 1,-1) -> Set(((1,0),(-1,-2)), ((0,-1),(1,1)), ((0,-1),(2,1)), ((0,-1),(1,2)), ((1,0),(-2,-1))), 
+	        (-1, 0) -> Set(((0,1),(-1,-2)), ((0,-1),(-1,2))), 
+	        (-2,-1) -> Set(((0,-1),(-2,1)), ((-1,0),(-1,2)), ((-1,0),(1,-2)), ((-2,0),(1,-2)), ((-1,-1),(-2,1)), ((-1,-1),(-1,2)), ((-1,-1),(-1,1)), ((0,-1),(-1,2)), ((0,-1),(-1,1))), 
+	        (-1, 2) -> Set(((-1,0),(1,1)), ((-1,0),(2,1)), ((0,2),(-2,-1)), ((0,1),(2,1)), ((0,1),(-2,-1)), ((-1,0),(1,2)), ((-1,1),(2,1)), ((-1,1),(1,2)), ((-1,1),(1,1))), 
+	        ( 0, 1) -> Set(((1,0),(-2,1)), ((-1,0),(2,1))), 
+	        (-1, 1) -> Set(((-1,0),(2,1)), ((0,1),(-2,-1)), ((0,1),(-1,-2)), ((-1,0),(1,2)), ((0,1),(-1,-1))), 
+	        ( 1, 2) -> Set(((1,0),(-1,1)), ((0,2),(2,-1)), ((1,1),(-1,2)), ((1,1),(-1,1)), ((1,1),(-2,1)), ((0,1),(-2,1)), ((1,0),(-2,1)), ((1,0),(-1,2)), ((0,1),(2,-1))), 
+	        ( 2, 1) -> Set(((2,0),(-1,2)), ((1,1),(1,-1)), ((0,1),(1,-1)), ((1,1),(1,-2)), ((0,1),(1,-2)), ((1,0),(-1,2)), ((1,1),(2,-1)), ((1,0),(1,-2)), ((0,1),(2,-1))), 
+	        ( 1, 0) -> Set(((0,-1),(1,2)), ((0,1),(1,-2))), 
+	        (-1,-2) -> Set(((-1,-1),(1,-2)), ((0,-1),(-2,1)), ((-1,0),(1,-2)), ((-1,0),(1,-1)), ((-1,0),(2,-1)), ((0,-2),(-2,1)), ((0,-1),(2,-1)), ((-1,-1),(1,-1)), ((-1,-1),(2,-1))), 
+	        ( 0,-1) -> Set(((-1,0),(2,-1)), ((1,0),(-2,-1)))
 	)
-
+	
+	private[dots] def r(v:Vector):Vector = (v._2,-v._1)
+	
+	/*
+	private[dots] def rs(s:Set[Vector]):Set[Vector] = s map r
+	private[dots] def rst(s:Set[(Vector,Vector)]):Set[(Vector,Vector)] = s map {case (a,b) => (r(a),r(b))}
+	private[dots] def rmp(m:Map[Vector,Set[(Vector,Vector)]]):Map[Vector,Set[(Vector,Vector)]] = m map {case (k,v) => (r(k),rst(v))}
+	private[dots] def m(v:Vector):Vector = (v._2,v._1)
+	private[dots] def mst(s:Set[(Vector,Vector)]):Set[(Vector,Vector)] = s map {case (a,b) => (m(a),m(b))}
+	private val cs1 = Set(((0,-1),(1,2)), ((0,1),(1,-2)))
+	private val cs2 = Set(((1,0),(-1,1)), ((1,0),(-1,2)), ((1,0),(-2,1)), ((0,1),(1,-2)), ((0,1),(2,-1)))
+	private val cs3 = Set(((0,1),(2,-1)), ((0,1),(1,-1)), ((1,1),(1,-1)), ((0,1),(1,-2)), ((1,0),(1,-2)), ((1,0),(-1,2)), ((1,1),(1,-2)), ((1,1),(2,-1)), ((2,0),(-1,2)))
+	private val csm1 = Map((1,0) -> cs1, (1,1) -> cs2, (2,1) -> cs3, (1,2) -> mst(cs3))
+	private val csm2 = rmp(csm1)
+	private val csm3 = rmp(csm2)
+	private val csm4 = rmp(csm3)
+	val crossings: Map[Vector,Set[(Vector,Vector)]] = csm1 ++ csm2 ++ csm3 ++ csm4
+	*/
 }
 
 class DotsGame(height: Int, width: Int) {
@@ -185,10 +258,11 @@ class DotsGame(height: Int, width: Int) {
 				throw new IllegalArgumentException(s"$target not reachable from $source")
 			)
 			assert(edge.color == color, s"$edge should be $color")
-			//TODO check crossings
 			edge.taken = true
+			edge.markCrossings
 			edge.adjustSymmetricEdge
 			edge
+			
 		}
 	}
 
