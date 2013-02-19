@@ -21,12 +21,12 @@ object DotsGameRunner extends App {
 class DotsGamePlayer(
 	/** nazwa_hosta, czyli adres docelowy silnika gry */
 	val id:String,
-    /** numer_portu, czyli numer portu na którym silnik gry nas?uchuje */
+    /** numer_portu, czyli numer portu na ktï¿½rym silnik gry nas?uchuje */
  	val host:String,
 	/** numer_gracza, czyli nadany unikalny identyfikator dla gracza. 
 	 *  Ka?dy gracz przez ca?y okres rozgrywek b?dzie posiada? w?asny numer identyfikacyjny, b?d?cy liczb? z zakresu <1,65535 > */
 	val port:Int,
-	/** nazwa_pliku, czyli plik do którego program mo?e zapisywa? swoje dane w dowolnym formacie 
+	/** nazwa_pliku, czyli plik do ktï¿½rego program mo?e zapisywa? swoje dane w dowolnym formacie 
 	 *  o nie przekraczalnym rozmiarze 5MB = 5*1024*1024 bajty, plik b?dzie przekazywany mi?dzy rozgrywkami */
 	val filename:String = "data.txt"
 ) {
