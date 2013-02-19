@@ -5,13 +5,9 @@ trait Color {
 }
 
 object WHITE extends Color
-
 object BLACK extends Color
-
 object RED extends Color
-
 object BLUE extends Color
-
 object GRAY extends Color
 
 case class Dot(h: Int, w: Int, private val board: DotsBoard) {
