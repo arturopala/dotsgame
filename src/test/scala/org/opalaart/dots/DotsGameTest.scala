@@ -1,6 +1,8 @@
 package org.opalaart.dots
 
 import org.scalatest.FunSpec
+import java.net.ServerSocket
+import java.io.{InputStreamReader, BufferedReader, OutputStreamWriter, BufferedWriter}
 
 class DotsGameTest extends FunSpec {
 
@@ -138,14 +140,78 @@ class DotsGameTest extends FunSpec {
 			val game = new DotsGame(40, 30)
 			val dot1 = game.takeBlue(2, 2)
 			val dot2 = game.takeBlue(4, 4)
-			val edge1 = game.connectBlue(dot1, dot2)
+			game.connectBlue(dot1, dot2)
 			val dot3 = game.board.dot(3, 3)
-			val edge2 = dot3.edgeTo(dot2).get
+			dot3.edgeTo(dot2).get
 			val dot4 = game.takeRed(3, 2)
 			val dot5 = game.takeRed(2, 3)
 			intercept[AssertionError]{
-			    val edge3 = game.connectRed(dot4, dot5)
+			    game.connectRed(dot4, dot5)
 			}
+		}
+	}
+
+	describe("A DotsGameRunner") {
+		it("should create player with proper args"){
+			val id = "12345"
+			val host = "localhost"
+			val port = 6060
+			val filename = "data.txt"
+			DotsGameRunner.main(Array("-g",id,"-h",host,"-p",port.toString,"-f",filename))
+			val player = DotsGameRunner.player
+			assert(player.id==id)
+			assert(player.host==host)
+			assert(player.port==port)
+			assert(player.filename==filename)
+		}
+	}
+
+	describe("A DotsGamePlayer") {
+		val id = "12345"
+		val host = "localhost"
+		val port = 6060
+		val question = "How do you do?"
+		val answer = "How do you do."
+		val runnable = new Runnable {
+			override def run {
+				val serverSocket = new ServerSocket(port)
+				val socket =  serverSocket.accept
+				val writer: BufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))
+				val reader: BufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+				val line = reader.readLine()
+				assert(line==question)
+				writer.write(answer+"\r\n")
+				writer.flush()
+			}	 
+		}
+		it("should connect to the game server and exchange messages"){
+			val server = new Thread(runnable)
+			server.setDaemon(true)
+			server.start
+			val player = new DotsGamePlayer(id,host,port)
+			val (writer,reader) = player.connect
+			assert(writer!=null)
+			assert(reader!=null)
+			writer.write(question+"\r\n")
+			writer.flush()
+			val line = reader.readLine()
+			assert(line==answer)
+		}
+		it("should parse dot move line"){
+			val player = new DotsGamePlayer(id,host,port)
+			val (x,y) = (12,29)
+			val dot = player.parseDot(s"$x $y $id")
+			assert(dot.point.x==x)
+			assert(dot.point.y==y)
+			assert(dot.player==id)
+		}
+		it("should parse polygon move line"){
+			val player = new DotsGamePlayer(id,host,port)
+			val points = Set((12,29),(23,33),(18,40),(13,31))
+			val line = s"B ${points.size} $id"+points.foldLeft(""){case (s,(x,y)) => s+"\t"+x+" "+y}
+			val polygon = player.parsePolygon(line)
+			assert(polygon.player==id)
+			assert(polygon.points.size==points.size, s"$polygon size should be ${points.size}")
 		}
 	}
 
