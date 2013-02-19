@@ -55,18 +55,20 @@ class DotsGamePlayer(
 	
 	def start {
 		val (writer,reader) = connect
-		readMoves(reader)
+		val moves = readMoves(reader)
 	}
 	
-	def readMoves(reader:BufferedReader):Unit = {
+	def readMoves(reader:BufferedReader):Seq[Move] = {
+		val moves = Seq.newBuilder[Move]
 		val size = reader.readLine().toInt;
 		for (i <- 0 until size){
 			val line =  reader.readLine()
 			line.head match {
-				case 'B' => parsePolygon(line)
-				case _ => parseDot(line)
+				case 'B' => moves += parsePolygon(line)
+				case _ => moves += parseDot(line)
 			}
 		}
+		moves.result
 	}
 	
 	def parseDot(line:String):MoveDot = {
@@ -87,6 +89,7 @@ class DotsGamePlayer(
 	
 }
 
+trait Move
 case class MovePoint(x:Int,y:Int)
-case class MoveDot(player:String,point:MovePoint)
-case class MovePolygon(player:String,points:Set[MovePoint])
+case class MoveDot(player:String,point:MovePoint) extends Move
+case class MovePolygon(player:String,points:Set[MovePoint]) extends Move
