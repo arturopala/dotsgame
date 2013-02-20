@@ -10,6 +10,8 @@ object RED extends Color
 object BLUE extends Color
 object GRAY extends Color
 
+case class Player(id:String) extends Color
+
 case class Dot(h: Int, w: Int, private val board: DotsBoard) {
 	var color: Color = WHITE
 

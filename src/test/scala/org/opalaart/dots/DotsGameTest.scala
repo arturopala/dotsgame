@@ -2,7 +2,8 @@ package org.opalaart.dots
 
 import org.scalatest.FunSpec
 import java.net.ServerSocket
-import java.io.{InputStreamReader, BufferedReader, OutputStreamWriter, BufferedWriter}
+import java.io._
+import collection.mutable
 
 class DotsGameTest extends FunSpec {
 
@@ -188,6 +189,7 @@ class DotsGameTest extends FunSpec {
 			val server = new Thread(runnable)
 			server.setDaemon(true)
 			server.start
+			Thread.sleep(200)
 			val player = new DotsGamePlayer(id,host,port)
 			val (writer,reader) = player.connect
 			assert(writer!=null)
@@ -212,6 +214,20 @@ class DotsGameTest extends FunSpec {
 			val polygon = player.parsePolygon(line)
 			assert(polygon.player==id)
 			assert(polygon.points.size==points.size, s"$polygon size should be ${points.size}")
+		}
+		it("should read moves"){
+			val player = new DotsGamePlayer(id,host,port)
+			val previous = mutable.HashSet[String]()
+			val moves =
+				"""4
+				  |12 13 2
+				  |14 15 2
+				  |15 16 2
+				  |B 3 2 12 13 14 15 16 17
+				""".stripMargin
+			val reader = new BufferedReader(new StringReader(moves))
+			val newMoves = player.readMoves(reader,previous)
+			assert(newMoves(0)==MoveDot("2",MovePoint(12,13)))
 		}
 	}
 

@@ -2,6 +2,7 @@ package org.opalaart.dots
 
 import java.net.Socket
 import java.io.{InputStreamReader, BufferedReader, OutputStreamWriter, BufferedWriter}
+import collection.mutable
 
 object DotsGameRunner extends App {
 	
@@ -35,6 +36,10 @@ class DotsGamePlayer(
 	assert(host!=null, "host arg should be not null")
 	
 	val game = new DotsGame(30,40)
+	val players = mutable.HashMap[String,Color]()
+	val previousMoves = mutable.HashSet[String]()
+
+	def playerOf(id:String):Color = players.getOrElseUpdate(id, Player(id))
 	
 	def connect:(BufferedWriter,BufferedReader) = {
 		try {
@@ -55,17 +60,21 @@ class DotsGamePlayer(
 	
 	def start {
 		val (writer,reader) = connect
-		val moves = readMoves(reader)
+		val moves = readMoves(reader,previousMoves)
+		applyMoves(moves,game)
 	}
 	
-	def readMoves(reader:BufferedReader):Seq[Move] = {
+	def readMoves(reader:BufferedReader,previousMoves:mutable.HashSet[String]):Seq[Move] = {
 		val moves = Seq.newBuilder[Move]
-		val size = reader.readLine().toInt;
+		val size = reader.readLine.trim.toInt;
 		for (i <- 0 until size){
-			val line =  reader.readLine()
-			line.head match {
-				case 'B' => moves += parsePolygon(line)
-				case _ => moves += parseDot(line)
+			val line =  reader.readLine.trim
+			if (line.length>0 && !previousMoves.contains(line)){
+				previousMoves add line
+				moves += (line.head match {
+					case 'B' => parsePolygon(line)
+					case _ => parseDot(line)
+				})
 			}
 		}
 		moves.result
@@ -85,6 +94,14 @@ class DotsGamePlayer(
 			points += MovePoint(s(i+3).toInt,s(i+4).toInt)
 		}
 		MovePolygon(s(2),points.result)
+	}
+	
+	def applyMoves(moves:Seq[Move],game:DotsGame):Unit = {
+		moves foreach {
+			case MoveDot(id,MovePoint(x,y)) => {
+				game.take(y,x,playerOf(id));
+			}
+		}
 	}
 	
 }
