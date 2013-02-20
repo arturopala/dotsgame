@@ -59,10 +59,32 @@ class DotsGamePlayer(
 	}
 	
 	def start {
+    Console.println("Good luck!")
 		val (writer,reader) = connect
-		val moves = readMoves(reader,previousMoves)
-		applyMoves(moves,game)
+    listen(writer,reader)
+    Console.println("Game over!")
 	}
+  
+  def listen(writer:BufferedWriter,reader:BufferedReader) {
+    try{
+      val moves = readMoves(reader,previousMoves)
+      applyMoves(moves,game)
+      val nextMoves = Seq.newBuilder[Move]
+      val pointOpt = game.chooseMoveFor(playerOf(id))
+      if (pointOpt.isDefined){
+        val (h,w) = pointOpt.get
+        nextMoves += MoveDot(id,MovePoint(w+1,h+1))
+        writeMoves(writer,nextMoves.result)
+        listen(writer,reader)
+      }
+    }
+    catch {
+      case e:Throwable => {
+        Console.println("Fatal error occurred:")
+        e.printStackTrace()
+      }
+    }
+  }
 	
 	def readMoves(reader:BufferedReader,previousMoves:mutable.HashSet[String]):Seq[Move] = {
 		val moves = Seq.newBuilder[Move]
@@ -89,7 +111,7 @@ class DotsGamePlayer(
 	def parsePolygon(line:String):MovePolygon = {
 		val s = line.split("\\s|\t")
 		val size = s(1).toInt
-		val points = Set.newBuilder[MovePoint]
+		val points = Seq.newBuilder[MovePoint]
 		for (i <- 0 until (size*2) by 2){
 			points += MovePoint(s(i+3).toInt,s(i+4).toInt)
 		}
@@ -97,16 +119,33 @@ class DotsGamePlayer(
 	}
 	
 	def applyMoves(moves:Seq[Move],game:DotsGame):Unit = {
-		moves foreach {
-			case MoveDot(id,MovePoint(x,y)) => {
-				game.take(y,x,playerOf(id));
-			}
-		}
+      moves foreach {
+        case MoveDot(id,MovePoint(x,y)) => {
+          game.take(y-1,x-1,playerOf(id));
+        }
+        case MovePolygon(id,points) => {
+          points.sliding(2,1) foreach (p => {
+            game.connect(p(0).y-1,p(0).x-1,p(1).y-1,p(1).x-1,playerOf(id))
+          })
+        }
+      }
 	}
+  
+  def writeMoves(writer:BufferedWriter,moves:Seq[Move]):Unit = {
+      moves foreach {
+        case MoveDot(id,MovePoint(x,y)) => {
+          
+        }
+        case MovePolygon(id,points) => {
+          
+        }
+      }
+      writer.flush()
+  }
 	
 }
 
 trait Move
 case class MovePoint(x:Int,y:Int)
 case class MoveDot(player:String,point:MovePoint) extends Move
-case class MovePolygon(player:String,points:Set[MovePoint]) extends Move
+case class MovePolygon(player:String,points:Seq[MovePoint]) extends Move

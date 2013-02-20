@@ -215,20 +215,60 @@ class DotsGameTest extends FunSpec {
 			assert(polygon.player==id)
 			assert(polygon.points.size==points.size, s"$polygon size should be ${points.size}")
 		}
-		it("should read moves"){
+		it("should read all moves"){
 			val player = new DotsGamePlayer(id,host,port)
 			val previous = mutable.HashSet[String]()
 			val moves =
 				"""4
 				  |12 13 2
-				  |14 15 2
-				  |15 16 2
+				  |14 15 1
+				  |16 17 2
 				  |B 3 2 12 13 14 15 16 17
 				""".stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
 			val newMoves = player.readMoves(reader,previous)
+      assert(newMoves.size==4,"new moves size should be 4")
 			assert(newMoves(0)==MoveDot("2",MovePoint(12,13)))
+      assert(newMoves(1)==MoveDot("1",MovePoint(14,15)))
+      assert(newMoves(2)==MoveDot("2",MovePoint(16,17)))
 		}
+    it("should read only new moves"){
+      val player = new DotsGamePlayer(id,host,port)
+      val previous = mutable.HashSet[String]("12 13 2","B 3 2 12 13 14 15 16 17")
+      val moves =
+        """4
+          |12 13 2
+          |14 15 2
+          |16 17 1
+          |B 3 2 12 13 14 15 16 17
+      """.stripMargin
+      val reader = new BufferedReader(new StringReader(moves))
+      val newMoves = player.readMoves(reader,previous)
+      assert(newMoves.size==2,"new moves size should be 2")
+      assert(newMoves(0)==MoveDot("2",MovePoint(14,15)))
+      assert(newMoves(1)==MoveDot("1",MovePoint(16,17)))
+    }
+    it("should apply sequence of moves"){
+      val player = new DotsGamePlayer(id,host,port)
+      val game = new DotsGame(30,40)
+      val moves = Seq(
+        MoveDot("2",MovePoint(10,20)),
+        MoveDot("1",MovePoint(11,21)),
+        MoveDot("2",MovePoint(9,18)),
+        MovePolygon("2",Seq(MovePoint(10,20),MovePoint(9,18)))
+      )
+      player.applyMoves(moves,game)
+      val p1 = player.playerOf("1")
+      val p2 = player.playerOf("2")
+      val dot1 = game.board.dot(19,9)
+      val dot2 = game.board.dot(17,8)
+      assert(dot1.color==p2)
+      assert(dot2.color==p2)
+      assert(game.board.dot(20,10).color==p1)
+      val edge1 = dot1.edgeTo(dot2).get
+      assert(edge1.color==p2)
+      assert(edge1.taken)
+    }
 	}
 
 }

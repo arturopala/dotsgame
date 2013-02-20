@@ -10,7 +10,9 @@ object RED extends Color
 object BLUE extends Color
 object GRAY extends Color
 
-case class Player(id:String) extends Color
+case class Player(id:String) extends Color {
+  override def toString: String = s"Player($id)"
+}
 
 case class Dot(h: Int, w: Int, private val board: DotsBoard) {
 	var color: Color = WHITE
@@ -266,5 +268,9 @@ class DotsGame(height: Int, width: Int) {
 
 	def connectRed(source: Dot, target: Dot) = connect(source, target, RED)
 	def connectBlue(source: Dot, target: Dot) = connect(source, target, BLUE)
+  
+  def chooseMoveFor(color:Color):Option[(Int,Int)] = {
+    board find (dot => dot.color==color) map (dot => (dot.w,dot.h))
+  }
 
 }
