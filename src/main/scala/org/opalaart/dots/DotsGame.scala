@@ -1,5 +1,7 @@
 package org.opalaart.dots
 
+import collection.mutable.ArrayBuffer
+
 trait Color {
 	override def toString: String = super.toString.split('.').last.split('$').head + ")"
 }
@@ -94,10 +96,12 @@ case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: B
 	}
 }
 
+case class Polygon(vertices:Seq[Dot],color:Color)
+
 class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 
 	private val dots = new Array[Array[Option[Dot]]](height)
-	private val edges = scala.collection.mutable.ArrayBuffer[Edge]()
+  val polygons = new ArrayBuffer[Polygon]
 
 	//board arrays initialization with None
 	for (h <- 0 until height) {
@@ -139,11 +143,7 @@ class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 
 	def createDot(h: Int, w: Int): Dot = Dot(h, w, this)
 
-	def createEdge(source: Dot, target: Dot): Edge = {
-		val edge = Edge(source, target)
-		edges += edge
-		edge
-	}
+	def createEdge(source: Dot, target: Dot): Edge = Edge(source, target)
 
 	//extends trait Traversable
 	override val size = width * height
@@ -269,8 +269,23 @@ class DotsGame(height: Int, width: Int) {
 	def connectRed(source: Dot, target: Dot) = connect(source, target, RED)
 	def connectBlue(source: Dot, target: Dot) = connect(source, target, BLUE)
   
+  def connect(points:Seq[(Int,Int)],color:Color) {
+    val vertices:Seq[Dot] = points map {case (h,w) => board.dot(h,w)}
+    vertices sliding(2,1) foreach {
+      dots => connect(dots(0),dots(1),color)
+    }
+    val polygon = Polygon(vertices,color)
+    board.polygons += polygon
+  }
+  
   def chooseNextMoveFor(color:Color):Option[(Int,Int)] = {
-    board find (dot => dot.color==BLACK) map (dot => (dot.w,dot.h))
+    for (
+      dot <- board find (dot => dot.color==BLACK)
+    ) {
+      take(dot,color)
+      return Some((dot.h,dot.w))
+    }
+    None
   }
 
 }

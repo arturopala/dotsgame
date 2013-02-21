@@ -78,7 +78,7 @@ class DotsGamePlayer(
 				(h, w) <- game.chooseNextMoveFor(playerOf(id))
 			) {
 				nextMoves += MoveDot(id, MovePoint(w + 1, h + 1))
-				writeMoves(writer, nextMoves.result)
+				writeMoves(writer, nextMoves.result, previousMoves)
 				listen(writer, reader)
 			}
 		}
@@ -97,10 +97,13 @@ class DotsGamePlayer(
 			val line = reader.readLine.trim
 			if (line.length > 0 && !previousMoves.contains(line)) {
 				previousMoves add line
-				moves += (line.head match {
+				val move = (line.head match {
 					case 'B' => parsePolygon(line)
 					case _ => parseDot(line)
 				})
+        if (move.player!=id){
+          moves += move
+        }
 			}
 		}
 		moves.result
@@ -124,23 +127,17 @@ class DotsGamePlayer(
 
 	def applyMoves(moves: Seq[Move], game: DotsGame): Unit = {
 		moves foreach {
-			case MoveDot(id, MovePoint(x, y)) => {
-				game.take(y - 1, x - 1, playerOf(id));
-			}
-			case MovePolygon(id, points) => {
-				points.sliding(2, 1) foreach (p => {
-					game.connect(p(0).y - 1, p(0).x - 1, p(1).y - 1, p(1).x - 1, playerOf(id))
-				})
-			}
+			case MoveDot(id, MovePoint(x, y)) => game.take(y - 1, x - 1, playerOf(id));
+			case MovePolygon(id, points) => game.connect(points.map{case MovePoint(x,y) => (y - 1,x - 1)}, playerOf(id))
 		}
 	}
 
-	def writeMoves(writer: Writer, moves: Seq[Move]): Unit = {
+	def writeMoves(writer: Writer, moves: Seq[Move], previousMoves: mutable.HashSet[String]): Unit = {
 		moves foreach {
 			case MoveDot(id, MovePoint(x, y)) => writePoint(writer, x, y)
 			case MovePolygon(id, points) => {
-				writer.write(points.size)
-				writer.write("\r\n")
+				writer.write(points.size.toString)
+				writer.write("\n")
 				points foreach {
 					case MovePoint(x, y) =>  writePoint(writer, x, y)
 				}
@@ -154,12 +151,14 @@ class DotsGamePlayer(
 		writer.write((y + 1).toString)
 		writer.write(" ")
 		writer.write((x + 1).toString)
-		writer.write("\r\n")
+		writer.write("\n")
 		writer.flush()
 	}
 }
 
-trait Move
+trait Move {
+  val player: String
+}
 
 case class MovePoint(x: Int, y: Int)
 

@@ -226,7 +226,7 @@ class DotsGameTest extends FunSpec {
 				  |14 15 1
 				  |16 17 2
 				  |B 3 2 12 13 14 15 16 17
-				""".stripMargin
+				  |""".stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
 			val newMoves = player.readMoves(reader, previous)
 			assert(newMoves.size == 4, "new moves size should be 4")
@@ -234,16 +234,17 @@ class DotsGameTest extends FunSpec {
 			assert(newMoves(1) == MoveDot("1", MovePoint(14, 15)))
 			assert(newMoves(2) == MoveDot("2", MovePoint(16, 17)))
 		}
-		it("should read only new moves") {
+		it("should read only new moves from other players") {
 			val player = new DotsGamePlayer(id, host, port)
 			val previous = mutable.HashSet[String]("12 13 2", "B 3 2 12 13 14 15 16 17")
 			val moves =
-				"""4
-				  |12 13 2
-				  |14 15 2
-				  |16 17 1
+        """4
+          |12 13 2
+          |14 15 2
+          |16 17 1
+          |20 20 12345
 				  |B 3 2 12 13 14 15 16 17
-				""".stripMargin
+        	|""".stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
 			val newMoves = player.readMoves(reader, previous)
 			assert(newMoves.size == 2, "new moves size should be 2")
@@ -275,7 +276,7 @@ class DotsGameTest extends FunSpec {
 			val player = new DotsGamePlayer(id, host, port)
 			val writer = new StringWriter
 			player.writePoint(writer,7,13)
-			assert(writer.getBuffer.toString=="14 8\r\n")
+			assert(writer.getBuffer.toString=="14 8\n")
 		}
 		it("should write moves to the stream") {
 			val player = new DotsGamePlayer(id, host, port)
@@ -284,9 +285,33 @@ class DotsGameTest extends FunSpec {
 				MoveDot("2", MovePoint(10, 20)),
 				MovePolygon("2", Seq(MovePoint(10, 20), MovePoint(9, 18)))
 			)
-			player.writeMoves(writer,moves)
-			assert(writer.getBuffer.toString=="14 8\r\n")
+      val previous = mutable.HashSet[String]() 
+			player.writeMoves(writer,moves,previous)
+      val expected = """21 11
+         |2
+         |21 11
+         |19 10
+         |""".stripMargin
+      val response = writer.getBuffer.toString
+			assert(response == expected)
 		}
+    it("should listen and respond") {
+      val player = new DotsGamePlayer(id, host, port)
+      val writer = new StringWriter
+      val moves =
+        """4
+          |12 13 2
+          |14 15 2
+          |16 17 2
+          |B 3 2 12 13 14 15 16 17
+      """.stripMargin
+      val reader = new BufferedReader(new StringReader(moves))
+      player.listen(writer,reader)
+      val board = player.game.board
+      val response = writer.getBuffer.toString
+      assert(!response.isEmpty)
+      assert(board.dot(12,11).color==player.playerOf("2"))
+    }
 	}
 
 }
