@@ -76,8 +76,8 @@ class DotsGameTest extends FunSpec {
 	}
 
 	describe("A DotsGameRules") {
-	    
-	    import DotsGameRules._
+
+		import DotsGameRules._
 
 		it("should have moves set of size 24") {
 			assert(moves.size == 24)
@@ -86,16 +86,16 @@ class DotsGameTest extends FunSpec {
 			assert(edges.size == 16)
 		}
 		it("should have crossings") {
-		    assert(crossings.size==16)
-		    assert(edges.forall(edge => crossings.get(edge).isDefined))
-			assert(crossings((1,0)).size==2)
-			assert(crossings((1,1)).size==5)
-			assert(crossings((1,2)).size==9)
-			assert(crossings((2,1)).size==9)
-			assert(crossings(r(1,0)).size==2)
-			assert(crossings(r(1,1)).size==5)
-			assert(crossings(r(1,2)).size==9)
-			assert(crossings(r(2,1)).size==9)
+			assert(crossings.size == 16)
+			assert(edges.forall(edge => crossings.get(edge).isDefined))
+			assert(crossings((1, 0)).size == 2)
+			assert(crossings((1, 1)).size == 5)
+			assert(crossings((1, 2)).size == 9)
+			assert(crossings((2, 1)).size == 9)
+			assert(crossings(r(1, 0)).size == 2)
+			assert(crossings(r(1, 1)).size == 5)
+			assert(crossings(r(1, 2)).size == 9)
+			assert(crossings(r(2, 1)).size == 9)
 		}
 	}
 
@@ -124,15 +124,15 @@ class DotsGameTest extends FunSpec {
 		it("should connect two blue dots with blue edge") {
 			val game = new DotsGame(40, 30)
 			val dot1 = game.takeBlue(2, 2)
-			assert(dot1.color==BLUE, s"$dot1 should be BLUE")
+			assert(dot1.color == BLUE, s"$dot1 should be BLUE")
 			dot1.adjacent foreach (dot => assert(dot.color == BLACK, s"adjacent $dot should be BLACK"))
 			val dot2 = game.takeBlue(4, 4)
-			assert(dot2.color==BLUE, s"$dot2 should be BLUE")
+			assert(dot2.color == BLUE, s"$dot2 should be BLUE")
 			val edge1 = game.connectBlue(dot1, dot2)
 			assert(edge1.taken == true, s"$edge1 should be taken")
 			assert(edge1.color == BLUE, s"$edge1 should be BLUE")
 			val dot3 = game.board.dot(3, 3)
-			assert(dot3.color==BLUE, s"$dot3 should be BLUE")
+			assert(dot3.color == BLUE, s"$dot3 should be BLUE")
 			val edge2 = dot3.edgeTo(dot2).get
 			assert(edge2.taken == true, s"$edge2 should be taken")
 			assert(edge2.color == BLUE, s"$edge2 should be BLUE")
@@ -146,24 +146,24 @@ class DotsGameTest extends FunSpec {
 			dot3.edgeTo(dot2).get
 			val dot4 = game.takeRed(3, 2)
 			val dot5 = game.takeRed(2, 3)
-			intercept[AssertionError]{
-			    game.connectRed(dot4, dot5)
+			intercept[AssertionError] {
+				game.connectRed(dot4, dot5)
 			}
 		}
 	}
 
 	describe("A DotsGameRunner") {
-		it("should create player with proper args"){
+		it("should create player with proper args") {
 			val id = "12345"
 			val host = "localhost"
 			val port = 6060
 			val filename = "data.txt"
-			DotsGameRunner.main(Array("-g",id,"-h",host,"-p",port.toString,"-f",filename))
+			DotsGameRunner.main(Array("-g", id, "-h", host, "-p", port.toString, "-f", filename))
 			val player = DotsGameRunner.player
-			assert(player.id==id)
-			assert(player.host==host)
-			assert(player.port==port)
-			assert(player.filename==filename)
+			assert(player.id == id)
+			assert(player.host == host)
+			assert(player.port == port)
+			assert(player.filename == filename)
 		}
 	}
 
@@ -176,47 +176,49 @@ class DotsGameTest extends FunSpec {
 		val runnable = new Runnable {
 			override def run {
 				val serverSocket = new ServerSocket(port)
-				val socket =  serverSocket.accept
+				val socket = serverSocket.accept
 				val writer: BufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))
 				val reader: BufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
 				val line = reader.readLine()
-				assert(line==question)
-				writer.write(answer+"\r\n")
+				assert(line == question)
+				writer.write(answer + "\r\n")
 				writer.flush()
-			}	 
+			}
 		}
-		it("should connect to the game server and exchange messages"){
+		it("should connect to the game server and exchange messages") {
 			val server = new Thread(runnable)
 			server.setDaemon(true)
 			server.start
 			Thread.sleep(200)
-			val player = new DotsGamePlayer(id,host,port)
-			val (writer,reader) = player.connect
-			assert(writer!=null)
-			assert(reader!=null)
-			writer.write(question+"\r\n")
+			val player = new DotsGamePlayer(id, host, port)
+			val (writer, reader) = player.connect
+			assert(writer != null)
+			assert(reader != null)
+			writer.write(question + "\r\n")
 			writer.flush()
 			val line = reader.readLine()
-			assert(line==answer)
+			assert(line == answer)
 		}
-		it("should parse dot move line"){
-			val player = new DotsGamePlayer(id,host,port)
-			val (x,y) = (12,29)
+		it("should parse dot move line") {
+			val player = new DotsGamePlayer(id, host, port)
+			val (x, y) = (12, 29)
 			val dot = player.parseDot(s"$x $y $id")
-			assert(dot.point.x==x)
-			assert(dot.point.y==y)
-			assert(dot.player==id)
+			assert(dot.point.x == x)
+			assert(dot.point.y == y)
+			assert(dot.player == id)
 		}
-		it("should parse polygon move line"){
-			val player = new DotsGamePlayer(id,host,port)
-			val points = Set((12,29),(23,33),(18,40),(13,31))
-			val line = s"B ${points.size} $id"+points.foldLeft(""){case (s,(x,y)) => s+"\t"+x+" "+y}
+		it("should parse polygon move line") {
+			val player = new DotsGamePlayer(id, host, port)
+			val points = Set((12, 29), (23, 33), (18, 40), (13, 31))
+			val line = s"B ${points.size} $id" + points.foldLeft("") {
+				case (s, (x, y)) => s + "\t" + x + " " + y
+			}
 			val polygon = player.parsePolygon(line)
-			assert(polygon.player==id)
-			assert(polygon.points.size==points.size, s"$polygon size should be ${points.size}")
+			assert(polygon.player == id)
+			assert(polygon.points.size == points.size, s"$polygon size should be ${points.size}")
 		}
-		it("should read all moves"){
-			val player = new DotsGamePlayer(id,host,port)
+		it("should read all moves") {
+			val player = new DotsGamePlayer(id, host, port)
 			val previous = mutable.HashSet[String]()
 			val moves =
 				"""4
@@ -226,49 +228,65 @@ class DotsGameTest extends FunSpec {
 				  |B 3 2 12 13 14 15 16 17
 				""".stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
-			val newMoves = player.readMoves(reader,previous)
-      assert(newMoves.size==4,"new moves size should be 4")
-			assert(newMoves(0)==MoveDot("2",MovePoint(12,13)))
-      assert(newMoves(1)==MoveDot("1",MovePoint(14,15)))
-      assert(newMoves(2)==MoveDot("2",MovePoint(16,17)))
+			val newMoves = player.readMoves(reader, previous)
+			assert(newMoves.size == 4, "new moves size should be 4")
+			assert(newMoves(0) == MoveDot("2", MovePoint(12, 13)))
+			assert(newMoves(1) == MoveDot("1", MovePoint(14, 15)))
+			assert(newMoves(2) == MoveDot("2", MovePoint(16, 17)))
 		}
-    it("should read only new moves"){
-      val player = new DotsGamePlayer(id,host,port)
-      val previous = mutable.HashSet[String]("12 13 2","B 3 2 12 13 14 15 16 17")
-      val moves =
-        """4
-          |12 13 2
-          |14 15 2
-          |16 17 1
-          |B 3 2 12 13 14 15 16 17
-      """.stripMargin
-      val reader = new BufferedReader(new StringReader(moves))
-      val newMoves = player.readMoves(reader,previous)
-      assert(newMoves.size==2,"new moves size should be 2")
-      assert(newMoves(0)==MoveDot("2",MovePoint(14,15)))
-      assert(newMoves(1)==MoveDot("1",MovePoint(16,17)))
-    }
-    it("should apply sequence of moves"){
-      val player = new DotsGamePlayer(id,host,port)
-      val game = new DotsGame(30,40)
-      val moves = Seq(
-        MoveDot("2",MovePoint(10,20)),
-        MoveDot("1",MovePoint(11,21)),
-        MoveDot("2",MovePoint(9,18)),
-        MovePolygon("2",Seq(MovePoint(10,20),MovePoint(9,18)))
-      )
-      player.applyMoves(moves,game)
-      val p1 = player.playerOf("1")
-      val p2 = player.playerOf("2")
-      val dot1 = game.board.dot(19,9)
-      val dot2 = game.board.dot(17,8)
-      assert(dot1.color==p2)
-      assert(dot2.color==p2)
-      assert(game.board.dot(20,10).color==p1)
-      val edge1 = dot1.edgeTo(dot2).get
-      assert(edge1.color==p2)
-      assert(edge1.taken)
-    }
+		it("should read only new moves") {
+			val player = new DotsGamePlayer(id, host, port)
+			val previous = mutable.HashSet[String]("12 13 2", "B 3 2 12 13 14 15 16 17")
+			val moves =
+				"""4
+				  |12 13 2
+				  |14 15 2
+				  |16 17 1
+				  |B 3 2 12 13 14 15 16 17
+				""".stripMargin
+			val reader = new BufferedReader(new StringReader(moves))
+			val newMoves = player.readMoves(reader, previous)
+			assert(newMoves.size == 2, "new moves size should be 2")
+			assert(newMoves(0) == MoveDot("2", MovePoint(14, 15)))
+			assert(newMoves(1) == MoveDot("1", MovePoint(16, 17)))
+		}
+		it("should apply sequence of moves") {
+			val player = new DotsGamePlayer(id, host, port)
+			val game = new DotsGame(30, 40)
+			val moves = Seq(
+				MoveDot("2", MovePoint(10, 20)),
+				MoveDot("1", MovePoint(11, 21)),
+				MoveDot("2", MovePoint(9, 18)),
+				MovePolygon("2", Seq(MovePoint(10, 20), MovePoint(9, 18)))
+			)
+			player.applyMoves(moves, game)
+			val p1 = player.playerOf("1")
+			val p2 = player.playerOf("2")
+			val dot1 = game.board.dot(19, 9)
+			val dot2 = game.board.dot(17, 8)
+			assert(dot1.color == p2)
+			assert(dot2.color == p2)
+			assert(game.board.dot(20, 10).color == p1)
+			val edge1 = dot1.edgeTo(dot2).get
+			assert(edge1.color == p2)
+			assert(edge1.taken)
+		}
+		it("should write move point to the stream") {
+			val player = new DotsGamePlayer(id, host, port)
+			val writer = new StringWriter
+			player.writePoint(writer,7,13)
+			assert(writer.getBuffer.toString=="14 8\r\n")
+		}
+		it("should write moves to the stream") {
+			val player = new DotsGamePlayer(id, host, port)
+			val writer = new StringWriter
+			val moves = Seq(
+				MoveDot("2", MovePoint(10, 20)),
+				MovePolygon("2", Seq(MovePoint(10, 20), MovePoint(9, 18)))
+			)
+			player.writeMoves(writer,moves)
+			assert(writer.getBuffer.toString=="14 8\r\n")
+		}
 	}
 
 }

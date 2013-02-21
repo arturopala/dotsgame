@@ -269,8 +269,8 @@ class DotsGame(height: Int, width: Int) {
 	def connectRed(source: Dot, target: Dot) = connect(source, target, RED)
 	def connectBlue(source: Dot, target: Dot) = connect(source, target, BLUE)
   
-  def chooseMoveFor(color:Color):Option[(Int,Int)] = {
-    board find (dot => dot.color==color) map (dot => (dot.w,dot.h))
+  def chooseNextMoveFor(color:Color):Option[(Int,Int)] = {
+    board find (dot => dot.color==BLACK) map (dot => (dot.w,dot.h))
   }
 
 }
