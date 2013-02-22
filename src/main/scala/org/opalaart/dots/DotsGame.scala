@@ -33,14 +33,15 @@ case class Dot(h: Int, w: Int, var color: Color = WHITE)(private val board: Dots
 case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: Boolean = false) {
     
 	def adjust {
-		if (color==WHITE || color==BLACK) {
+		if (!taken && color!=GRAY) {
 			if (source.color == target.color) {
 				color = source.color
 			} else if (source.color != WHITE && source.color != BLACK && target.color != WHITE && target.color != BLACK) {
 				if (source.color != target.color) color = GRAY
-			} else if ((source.color != WHITE && source.color != BLACK && target.color == BLACK) || 
-        (target.color != WHITE && target.color != BLACK && source.color == BLACK)) {
-        color = BLACK
+			} else if (source.color != WHITE && source.color != BLACK && target.color == BLACK){
+        color = source.color
+      } else if(target.color != WHITE && target.color != BLACK && source.color == BLACK) {
+        color = target.color
       }
 		}
 		adjustSymmetricEdge
@@ -101,7 +102,7 @@ case class Polygon(edges:Seq[Edge],color:Color)
 
 class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 
-	private val dots = new Array[Array[Option[Dot]]](height)
+  private val dots = new Array[Array[Option[Dot]]](height)
   val polygons = new ArrayBuffer[Polygon]
 
 	//board arrays initialization with None
@@ -156,6 +157,10 @@ class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
   def blackDots = this.filter(dot => dot.color==BLACK)
   def dotsOfColor(color:Color) = this.filter(dot => dot.color==color)
   def dotsOfOtherPlayer(color:Color) = this.filter(dot => (dot.color!=color && dot.color.isInstanceOf[Player]))
+
+  def dotsInsideRegion(hmin: Int, hmax: Int, wmin: Int, wmax: Int):Seq[Dot] = {
+    for (h <- hmin+1 until hmax; w <- wmin+1 until wmax) yield dot(h,w)
+  }
 
 }
 
@@ -229,7 +234,7 @@ class DotsGame(height: Int, width: Int) {
 	}
 
 	def take(dot: Dot, color: Color): Dot = {
-		assert(counter == 0 || dot.color == BLACK || dot.color==color, s"$dot should be BLACK or $color")
+		//assert(counter == 0 || dot.color == BLACK || dot.color==color, s"$dot should be BLACK or $color")
 		counter = counter + 1
 		dot.color = color
 		dot.adjacent filter (_.color == WHITE) foreach {dot =>
@@ -262,7 +267,7 @@ class DotsGame(height: Int, width: Int) {
 			val edge = source.edgeTo(target).getOrElse(
 				throw new IllegalArgumentException(s"$target not reachable from $source")
 			)
-			assert(edge.color == color, s"$edge should be $color")
+			//assert(edge.color == color, s"$edge should be $color")
 			edge.taken = true
 			edge.markCrossings
 			edge.adjustSymmetricEdge
@@ -276,7 +281,7 @@ class DotsGame(height: Int, width: Int) {
 
 	def connect(points: Seq[(Int, Int)], color: Color): Polygon = {
 		assert(points.size>1)
-		val edges: Seq[Edge] = points map {
+		val edges: Seq[Edge] = (points :+ (points.head)) map {
 			case (h, w) => board.dot(h, w)
 		} sliding(2, 1) flatMap {
 			dots => connect(dots(0), dots(1), color)
@@ -289,15 +294,23 @@ class DotsGame(height: Int, width: Int) {
 	}
 	
 	def markInnerDotsClosed(edges:Seq[Edge]):Seq[Dot] = {
-		//TODO
-		Seq()
+    val hs = edges map (_.source.h) sorted
+    val ws = edges map (_.source.w) sorted
+    val dots = board.dotsInsideRegion(hs.head,hs.last,ws.head,ws.last) filter (dot => dot.color==BLACK || dot.color==WHITE)
+    dots foreach {
+      dot => {
+        dot.color = GRAY
+        dot.adjustEdges
+      }
+    }
+		dots
 	}
 
 	def chooseNextMoveFor(color: Color): Option[(Int, Int)] = {
 		val dot = if (counter==0){
 			board.dot(0,0)
 		} else {
-      board.dotsOfOtherPlayer(color) flatMap (dot => dot.adjacent) filter (dot => dot.color==BLACK) maxBy (dot => score2(dot,color))
+      board.dotsOfOtherPlayer(color) flatMap (dot => dot.adjacent) filter (dot => dot.color==BLACK) maxBy (dot => score1(dot,color))
 		}
 		take(dot,color)
 		Some((dot.h, dot.w))
@@ -305,12 +318,11 @@ class DotsGame(height: Int, width: Int) {
   
   def score1(dot:Dot,color:Color):Int = {
     val score:Int = dot.edges.map (edge => edge.color match {
-      case BLACK if edge.target.color == color => (Math.random()*10).toInt
-      case BLACK if edge.target.color == BLACK => 1
-      case BLACK => (Math.random()*100).toInt
-      case WHITE => 5
-      case GRAY => -10
-      case _ => -1
+      case c if c==color => 1+(Math.random()*3).toInt
+      case BLACK => 1+(Math.random()*3).toInt
+      case WHITE => 0
+      case GRAY => -3
+      case _ => 1
     }).sum
     score
   }
