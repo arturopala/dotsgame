@@ -323,10 +323,10 @@ class DotsGame(height: Int, width: Int) {
   def score(dot:Dot,color:Color):Int = {
     val score:Int = dot.edges.map (edge => edge.color match {
       case c if c==color => edge.length
-      case BLACK => 3
-      case WHITE => 0
+      case BLACK => 0
+      case WHITE => 2*edge.length
       case GRAY => -3
-      case _ => 2*edge.length
+      case _ => edge.length
     }).sum
     score/2+(Math.random*(score/2)).toInt
   }
