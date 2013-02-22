@@ -48,7 +48,7 @@ class DotsGameTest extends FunSpec {
 		it("should dot throw Exception for index outside board") {
 			val board = new DotsBoard(40, 30)
 			intercept[IllegalArgumentException] {
-				val dot = board.dot(-2, 32)
+				board.dot(-2, 32)
 			}
 		}
 	}
@@ -168,7 +168,9 @@ class DotsGameTest extends FunSpec {
 			val host = "localhost"
 			val port = 6060
 			val filename = "data.txt"
-			DotsGameRunner.main(Array("-g", id, "-h", host, "-p", port.toString, "-f", filename))
+			intercept[java.net.ConnectException]{
+				DotsGameRunner.main(Array("-g", id, "-h", host, "-p", port.toString, "-f", filename))
+			}
 			val player = DotsGameRunner.player
 			assert(player.id == id)
 			assert(player.host == host)
@@ -286,7 +288,7 @@ class DotsGameTest extends FunSpec {
 			val player = new DotsGamePlayer(id, host, port)
 			val writer = new StringWriter
 			player.writePoint(writer, 7, 13)
-			assert(writer.getBuffer.toString == "14 8\n")
+			assert(writer.getBuffer.toString == "7 13\n")
 		}
 		it("should write moves to the stream") {
 			val player = new DotsGamePlayer(id, host, port)
@@ -297,10 +299,10 @@ class DotsGameTest extends FunSpec {
 			)
 			val previous = mutable.HashSet[String]()
 			player.writeMoves(writer, moves, previous)
-			val expected = """21 11
+			val expected = """10 20
 			                 |2
-			                 |21 11
-			                 |19 10
+			                 |10 20
+			                 |9 18
 			                 |""".stripMargin
 			val response = writer.getBuffer.toString
 			assert(response == expected)

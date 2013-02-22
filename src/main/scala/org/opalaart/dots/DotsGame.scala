@@ -230,6 +230,7 @@ class DotsGame(height: Int, width: Int) {
 			dot.adjustEdges
 		}
 		dot.adjustEdges
+		Console.println(dot)
 		dot
 	}
 
@@ -275,17 +276,24 @@ class DotsGame(height: Int, width: Int) {
 		} toSeq
 		val polygon = Polygon(edges, color)
 		board.polygons += polygon
+		markInnerDotsClosed(edges)
+		Console.println(polygon)
 		polygon
+	}
+	
+	def markInnerDotsClosed(edges:Seq[Edge]):Seq[Dot] = {
+		//TODO
+		Seq()
 	}
 
 	def chooseNextMoveFor(color: Color): Option[(Int, Int)] = {
-		for (
-			dot <- board find (dot => dot.color == BLACK)
-		) {
-			take(dot, color)
-			return Some((dot.h, dot.w))
+		val dot = if (counter==0){
+			board.dot(0,0)
+		} else {
+			board find (dot => dot.color == BLACK) getOrElse(throw new Exception("Cannot make any move!"))
 		}
-		None
+		take(dot,color)
+		Some((dot.h, dot.w))
 	}
 
 }

@@ -10,31 +10,26 @@ object DotsGameRunner extends App {
 	val params: Map[String, String] = args.sliding(2) map {
 		case a => (a(0), a(1))
 	} toMap
+	
+	assert(params contains "-h","host parameter -h must be provided")
+	assert(params contains "-p","port parameter -p must be provided")
+	assert(params contains "-g","player id parameter -g must be provided")
 
 	val host = params("-h")
 	val port = params("-p").toInt
 	val id = params("-g")
-	val filename = params("-f")
+	val filename = params getOrElse ("-f","data.txt")
 
 	val player = new DotsGamePlayer(id, host, port, filename)
-
+	player.start
 }
 
 class DotsGamePlayer(
-	                    /** nazwa_hosta, czyli adres docelowy silnika gry */
-	                    val id: String,
-
-	                    /** numer_portu, czyli numer portu na kt�rym silnik gry nas?uchuje */
-	                    val host: String,
-
-	                    /** numer_gracza, czyli nadany unikalny identyfikator dla gracza. 
-	                      * Ka?dy gracz przez ca?y okres rozgrywek b?dzie posiada? w?asny numer identyfikacyjny, b?d?cy liczb? z zakresu <1,65535 > */
-	                    val port: Int,
-
-	                    /** nazwa_pliku, czyli plik do kt�rego program mo?e zapisywa? swoje dane w dowolnym formacie 
-	                      * o nie przekraczalnym rozmiarze 5MB = 5*1024*1024 bajty, plik b?dzie przekazywany mi?dzy rozgrywkami */
-	                    val filename: String = "data.txt"
-	                    ) {
+    val id: String,
+    val host: String,
+    val port: Int,
+    val filename: String = "data.txt"
+    ) {
 
 	assert(id != null, "id arg should be not null")
 	assert(host != null, "host arg should be not null")
@@ -46,20 +41,10 @@ class DotsGamePlayer(
 	def playerOf(id: String): Color = players.getOrElseUpdate(id, Player(id))
 
 	def connect: (BufferedWriter, BufferedReader) = {
-		try {
-			val socket = new Socket(host, port)
-			val writer: BufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))
-			val reader: BufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
-			(writer, reader)
-		}
-		catch {
-			case e: Throwable => {
-				Console.println("Fatal error occurred. Cannot continue. Bye!")
-				e.printStackTrace()
-				System.exit(-1)
-				throw e
-			}
-		}
+		val socket = new Socket(host, port)
+		val writer: BufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()))
+		val reader: BufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+		(writer, reader)
 	}
 
 	def start {
@@ -86,7 +71,6 @@ class DotsGamePlayer(
 		catch {
 			case e: Throwable => {
 				Console.println("Fatal error occurred:")
-				e.printStackTrace()
 				throw e
 			}
 		}
@@ -94,7 +78,9 @@ class DotsGamePlayer(
 
 	def readMoves(reader: BufferedReader, previousMoves: mutable.HashSet[String]): Seq[Move] = {
 		val moves = Seq.newBuilder[Move]
-		val size = reader.readLine.trim.toInt;
+		val first = reader.readLine
+		if(first==null) throw new Exception("Empty or null input line")
+		val size = first.trim.toInt;
 		for (i <- 0 until size) {
 			val line = reader.readLine.trim
 			if (line.length > 0 && !previousMoves.contains(line)) {
@@ -150,9 +136,9 @@ class DotsGamePlayer(
 
 
 	def writePoint(writer: Writer, x: Int, y: Int) {
-		writer.write((y + 1).toString)
+		writer.write(x.toString)
 		writer.write(" ")
-		writer.write((x + 1).toString)
+		writer.write(y.toString)
 		writer.write("\n")
 		writer.flush()
 	}
