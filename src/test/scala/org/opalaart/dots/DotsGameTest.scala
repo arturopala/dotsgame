@@ -168,9 +168,7 @@ class DotsGameTest extends FunSpec {
 			val host = "localhost"
 			val port = 6060
 			val filename = "data.txt"
-			intercept[java.net.ConnectException]{
-				DotsGameRunner.main(Array("-g", id, "-h", host, "-p", port.toString, "-f", filename))
-			}
+		  DotsGameRunner.main(Array("-g", id, "-h", host, "-p", port.toString, "-f", filename))
 			val player = DotsGameRunner.player
 			assert(player.id == id)
 			assert(player.host == host)

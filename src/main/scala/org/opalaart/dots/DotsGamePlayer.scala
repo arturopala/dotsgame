@@ -48,12 +48,19 @@ class DotsGamePlayer(
 	}
 
 	def start {
-		Console.println("Good luck!")
-		val (writer, reader) = connect
-		while(true){
-			listen(writer, reader)
-		}
-		Console.println("Game over!")
+    try{
+      Console.println("Welcome. Good luck!")
+      val (writer, reader) = connect
+      while(true){
+        listen(writer, reader)
+      }
+    }
+    catch {
+      case e:Throwable => Console.println(e.getMessage)
+    }
+    finally {
+      Console.println("Game over!")
+    }
 	}
 
 	def listen(writer: Writer, reader: BufferedReader) {
@@ -79,7 +86,7 @@ class DotsGamePlayer(
 	def readMoves(reader: BufferedReader, previousMoves: mutable.HashSet[String]): Seq[Move] = {
 		val moves = Seq.newBuilder[Move]
 		val first = reader.readLine
-		if(first==null) throw new Exception("Empty or null input line")
+		if(first==null) throw new Exception("Empty or null input line.")
 		val size = first.trim.toInt;
 		for (i <- 0 until size) {
 			val line = reader.readLine.trim

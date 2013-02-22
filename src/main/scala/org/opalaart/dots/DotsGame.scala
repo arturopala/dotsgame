@@ -38,7 +38,10 @@ case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: B
 				color = source.color
 			} else if (source.color != WHITE && source.color != BLACK && target.color != WHITE && target.color != BLACK) {
 				if (source.color != target.color) color = GRAY
-			}
+			} else if ((source.color != WHITE && source.color != BLACK && target.color == BLACK) || 
+        (target.color != WHITE && target.color != BLACK && source.color == BLACK)) {
+        color = BLACK
+      }
 		}
 		adjustSymmetricEdge
 	}
@@ -149,6 +152,10 @@ class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 	def foreach[U](f: Dot => U): Unit = {
 		for (h <- 0 until height; w <- 0 until width) dots(h)(w).map(f)
 	}
+  
+  def blackDots = this.filter(dot => dot.color==BLACK)
+  def dotsOfColor(color:Color) = this.filter(dot => dot.color==color)
+  def dotsOfOtherPlayer(color:Color) = this.filter(dot => (dot.color!=color && dot.color.isInstanceOf[Player]))
 
 }
 
@@ -290,10 +297,33 @@ class DotsGame(height: Int, width: Int) {
 		val dot = if (counter==0){
 			board.dot(0,0)
 		} else {
-			board find (dot => dot.color == BLACK) getOrElse(throw new Exception("Cannot make any move!"))
+      board.dotsOfOtherPlayer(color) flatMap (dot => dot.adjacent) filter (dot => dot.color==BLACK) maxBy (dot => score2(dot,color))
 		}
 		take(dot,color)
 		Some((dot.h, dot.w))
 	}
+  
+  def score1(dot:Dot,color:Color):Int = {
+    val score:Int = dot.edges.map (edge => edge.color match {
+      case BLACK if edge.target.color == color => (Math.random()*10).toInt
+      case BLACK if edge.target.color == BLACK => 1
+      case BLACK => (Math.random()*100).toInt
+      case WHITE => 5
+      case GRAY => -10
+      case _ => -1
+    }).sum
+    score
+  }
+
+  def score2(dot:Dot,color:Color):Int = {
+    val score:Int = dot.adjacent.map (dot => dot.color match {
+      case c if c==color => (Math.random()*10).toInt
+      case BLACK => 1
+      case WHITE => (Math.random()*10).toInt
+      case GRAY => 0
+      case _ => 10
+    }).sum
+    score
+  }
 
 }
