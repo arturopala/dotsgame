@@ -128,7 +128,8 @@ class DotsGameTest extends FunSpec {
 			dot1.adjacent foreach (dot => assert(dot.color == BLACK, s"adjacent $dot should be BLACK"))
 			val dot2 = game.takeBlue(4, 4)
 			assert(dot2.color == BLUE, s"$dot2 should be BLUE")
-			val edge1 = game.connectBlue(dot1, dot2)
+			val edges = game.connectBlue(dot1, dot2)
+			val edge1 = edges(0)
 			assert(edge1.taken == true, s"$edge1 should be taken")
 			assert(edge1.color == BLUE, s"$edge1 should be BLUE")
 			val dot3 = game.board.dot(3, 3)
@@ -149,6 +150,15 @@ class DotsGameTest extends FunSpec {
 			intercept[AssertionError] {
 				game.connectRed(dot4, dot5)
 			}
+		}
+		it("should connect vertices of polygon") {
+			val game = new DotsGame(40, 30)
+			val points = Seq((1,1),(1,3),(3,3),(3,1),(1,1))
+			points foreach {case (h,w) => game.take(h,w,BLUE)}
+			val polygon = game.connect(points,BLUE)
+			assert(polygon.edges.size==8)
+			assert(polygon.color==BLUE)
+			assert(game.board.polygons contains polygon)
 		}
 	}
 
@@ -226,7 +236,7 @@ class DotsGameTest extends FunSpec {
 				  |14 15 1
 				  |16 17 2
 				  |B 3 2 12 13 14 15 16 17
-				  |""".stripMargin
+				  | """.stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
 			val newMoves = player.readMoves(reader, previous)
 			assert(newMoves.size == 4, "new moves size should be 4")
@@ -238,13 +248,13 @@ class DotsGameTest extends FunSpec {
 			val player = new DotsGamePlayer(id, host, port)
 			val previous = mutable.HashSet[String]("12 13 2", "B 3 2 12 13 14 15 16 17")
 			val moves =
-        """4
-          |12 13 2
-          |14 15 2
-          |16 17 1
-          |20 20 12345
+				"""4
+				  |12 13 2
+				  |14 15 2
+				  |16 17 1
+				  |20 20 12345
 				  |B 3 2 12 13 14 15 16 17
-        	|""".stripMargin
+				  |""".stripMargin
 			val reader = new BufferedReader(new StringReader(moves))
 			val newMoves = player.readMoves(reader, previous)
 			assert(newMoves.size == 2, "new moves size should be 2")
@@ -275,8 +285,8 @@ class DotsGameTest extends FunSpec {
 		it("should write move point to the stream") {
 			val player = new DotsGamePlayer(id, host, port)
 			val writer = new StringWriter
-			player.writePoint(writer,7,13)
-			assert(writer.getBuffer.toString=="14 8\n")
+			player.writePoint(writer, 7, 13)
+			assert(writer.getBuffer.toString == "14 8\n")
 		}
 		it("should write moves to the stream") {
 			val player = new DotsGamePlayer(id, host, port)
@@ -285,33 +295,33 @@ class DotsGameTest extends FunSpec {
 				MoveDot("2", MovePoint(10, 20)),
 				MovePolygon("2", Seq(MovePoint(10, 20), MovePoint(9, 18)))
 			)
-      val previous = mutable.HashSet[String]() 
-			player.writeMoves(writer,moves,previous)
-      val expected = """21 11
-         |2
-         |21 11
-         |19 10
-         |""".stripMargin
-      val response = writer.getBuffer.toString
+			val previous = mutable.HashSet[String]()
+			player.writeMoves(writer, moves, previous)
+			val expected = """21 11
+			                 |2
+			                 |21 11
+			                 |19 10
+			                 |""".stripMargin
+			val response = writer.getBuffer.toString
 			assert(response == expected)
 		}
-    it("should listen and respond") {
-      val player = new DotsGamePlayer(id, host, port)
-      val writer = new StringWriter
-      val moves =
-        """4
-          |12 13 2
-          |14 15 2
-          |16 17 2
-          |B 3 2 12 13 14 15 16 17
-      """.stripMargin
-      val reader = new BufferedReader(new StringReader(moves))
-      player.listen(writer,reader)
-      val board = player.game.board
-      val response = writer.getBuffer.toString
-      assert(!response.isEmpty)
-      assert(board.dot(12,11).color==player.playerOf("2"))
-    }
+		it("should listen and respond") {
+			val player = new DotsGamePlayer(id, host, port)
+			val writer = new StringWriter
+			val moves =
+				"""4
+				  |12 13 2
+				  |14 15 2
+				  |16 17 2
+				  |B 3 2 12 13 14 15 16 17
+				  |""".stripMargin
+			val reader = new BufferedReader(new StringReader(moves))
+			player.listen(writer, reader)
+			val board = player.game.board
+			val response = writer.getBuffer.toString
+			assert(!response.isEmpty)
+			assert(board.dot(12, 11).color == player.playerOf("2"))
+		}
 	}
 
 }

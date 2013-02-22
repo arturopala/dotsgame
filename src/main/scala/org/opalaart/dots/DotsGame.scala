@@ -3,7 +3,7 @@ package org.opalaart.dots
 import collection.mutable.ArrayBuffer
 
 trait Color {
-	override def toString: String = super.toString.split('.').last.split('$').head + ")"
+	override def toString: String = super.toString.split('.').last.split('$').head
 }
 
 object WHITE extends Color
@@ -16,8 +16,7 @@ case class Player(id:String) extends Color {
   override def toString: String = s"Player($id)"
 }
 
-case class Dot(h: Int, w: Int, private val board: DotsBoard) {
-	var color: Color = WHITE
+case class Dot(h: Int, w: Int, var color: Color = WHITE)(private val board: DotsBoard) {
 
 	lazy val index = board.indexOf(h, w)
 	lazy val adjacent: Set[Dot] = board.adjacentOf(h, w)
@@ -29,7 +28,6 @@ case class Dot(h: Int, w: Int, private val board: DotsBoard) {
 
 	def adjustEdges {edges foreach (_.adjust)}
 
-	override def toString: String = "Dot(" + w + "," + h + "," + color + ")"
 }
 
 case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: Boolean = false) {
@@ -96,7 +94,7 @@ case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: B
 	}
 }
 
-case class Polygon(vertices:Seq[Dot],color:Color)
+case class Polygon(edges:Seq[Edge],color:Color)
 
 class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 
@@ -141,7 +139,7 @@ class DotsBoard(height: Int, width: Int) extends Traversable[Dot] {
 		case (dh, dw) => this(h + dh, w + dw)
 	} filter (_.isDefined) map (_.get)
 
-	def createDot(h: Int, w: Int): Dot = Dot(h, w, this)
+	def createDot(h: Int, w: Int): Dot = Dot(h, w)(this)
 
 	def createEdge(source: Dot, target: Dot): Edge = Edge(source, target)
 
@@ -238,7 +236,7 @@ class DotsGame(height: Int, width: Int) {
 	def takeRed(h: Int, w: Int) = take(h, w, RED)
 	def takeBlue(h: Int, w: Int) = take(h, w, BLUE)
 
-	def connect(h1: Int, w1: Int, h2: Int, w2: Int, color: Color): Edge = {
+	def connect(h1: Int, w1: Int, h2: Int, w2: Int, color: Color): Seq[Edge] = {
 		val source = board.dot(h1, w1)
 		assert(source.color == color, s"$source should be $color")
 		val target = board.dot(h2, w2)
@@ -246,13 +244,12 @@ class DotsGame(height: Int, width: Int) {
 		connect(source, target, color)
 	}
 
-	def connect(source: Dot, target: Dot, color: Color): Edge = {
+	def connect(source: Dot, target: Dot, color: Color): Seq[Edge] = {
 		val vector = source.vectorTo(target)
 		if (DotsGameRules.doubles.contains(vector)){
 			val middle = source.dotAtOffset((vector._1/2,vector._2/2)).get
 			take(middle,color)
-			connect(middle,target,color)
-			connect(source,middle,color)
+			connect(middle,target,color) ++ connect(source,middle,color)
 		} else {
 			val edge = source.edgeTo(target).getOrElse(
 				throw new IllegalArgumentException(s"$target not reachable from $source")
@@ -261,31 +258,34 @@ class DotsGame(height: Int, width: Int) {
 			edge.taken = true
 			edge.markCrossings
 			edge.adjustSymmetricEdge
-			edge
-			
+			Seq(edge)
 		}
 	}
 
 	def connectRed(source: Dot, target: Dot) = connect(source, target, RED)
+
 	def connectBlue(source: Dot, target: Dot) = connect(source, target, BLUE)
-  
-  def connect(points:Seq[(Int,Int)],color:Color) {
-    val vertices:Seq[Dot] = points map {case (h,w) => board.dot(h,w)}
-    vertices sliding(2,1) foreach {
-      dots => connect(dots(0),dots(1),color)
-    }
-    val polygon = Polygon(vertices,color)
-    board.polygons += polygon
-  }
-  
-  def chooseNextMoveFor(color:Color):Option[(Int,Int)] = {
-    for (
-      dot <- board find (dot => dot.color==BLACK)
-    ) {
-      take(dot,color)
-      return Some((dot.h,dot.w))
-    }
-    None
-  }
+
+	def connect(points: Seq[(Int, Int)], color: Color): Polygon = {
+		assert(points.size>1)
+		val edges: Seq[Edge] = points map {
+			case (h, w) => board.dot(h, w)
+		} sliding(2, 1) flatMap {
+			dots => connect(dots(0), dots(1), color)
+		} toSeq
+		val polygon = Polygon(edges, color)
+		board.polygons += polygon
+		polygon
+	}
+
+	def chooseNextMoveFor(color: Color): Option[(Int, Int)] = {
+		for (
+			dot <- board find (dot => dot.color == BLACK)
+		) {
+			take(dot, color)
+			return Some((dot.h, dot.w))
+		}
+		None
+	}
 
 }

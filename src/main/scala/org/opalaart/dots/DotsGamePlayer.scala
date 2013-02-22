@@ -65,7 +65,9 @@ class DotsGamePlayer(
 	def start {
 		Console.println("Good luck!")
 		val (writer, reader) = connect
-		listen(writer, reader)
+		while(true){
+			listen(writer, reader)
+		}
 		Console.println("Game over!")
 	}
 
@@ -79,13 +81,13 @@ class DotsGamePlayer(
 			) {
 				nextMoves += MoveDot(id, MovePoint(w + 1, h + 1))
 				writeMoves(writer, nextMoves.result, previousMoves)
-				listen(writer, reader)
 			}
 		}
 		catch {
 			case e: Throwable => {
 				Console.println("Fatal error occurred:")
 				e.printStackTrace()
+				throw e
 			}
 		}
 	}
@@ -101,9 +103,9 @@ class DotsGamePlayer(
 					case 'B' => parsePolygon(line)
 					case _ => parseDot(line)
 				})
-        if (move.player!=id){
-          moves += move
-        }
+		        if (move.player!=id){
+		          moves += move
+		        }
 			}
 		}
 		moves.result
