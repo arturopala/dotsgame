@@ -160,6 +160,14 @@ class DotsGameTest extends FunSpec {
 			assert(polygon.color==BLUE)
 			assert(game.board.polygons contains polygon)
 		}
+
+    it("should find polygon") {
+      val game = new DotsGame(40, 30)
+      val points = Seq((1,1),(1,2),(2,2),(2,1))
+      points foreach {case (h,w) => game.take(h,w,BLUE)}
+      val polygonOpt = game.tryFindPolygon(1,1,BLUE)
+      assert(polygonOpt.isDefined)
+    }
 	}
 
 	describe("A DotsGameRunner") {
@@ -295,8 +303,7 @@ class DotsGameTest extends FunSpec {
 				MoveDot("2", MovePoint(10, 20)),
 				MovePolygon("2", Seq(MovePoint(10, 20), MovePoint(9, 18)))
 			)
-			val previous = mutable.HashSet[String]()
-			player.writeMoves(writer, moves, previous)
+			player.writeMoves(writer, moves)
 			val expected = """10 20
 			                 |2
 			                 |10 20

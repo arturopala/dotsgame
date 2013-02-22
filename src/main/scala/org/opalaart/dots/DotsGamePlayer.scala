@@ -65,15 +65,19 @@ class DotsGamePlayer(
 
 	def listen(writer: Writer, reader: BufferedReader) {
 		try {
-			val moves = readMoves(reader, previousMoves)
-			applyMoves(moves, game)
-			val nextMoves = Seq.newBuilder[Move]
-			for (
-				(h, w) <- game.chooseNextMoveFor(playerOf(id))
-			) {
-				nextMoves += MoveDot(id, MovePoint(w + 1, h + 1))
-				writeMoves(writer, nextMoves.result, previousMoves)
-			}
+      val moves = readMoves(reader, previousMoves)
+      applyMoves(moves, game)
+      val nextMoves = Seq.newBuilder[Move]
+      val color = playerOf(id)
+      val (h, w) = game.chooseNextMoveFor(color)
+      nextMoves += MoveDot(id, MovePoint(w + 1, h + 1))
+      val polygonOpt:Option[Seq[(Int,Int)]] = game.tryFindPolygon(h,w,color)
+      polygonOpt foreach {
+        points => if(points.size>2){
+          nextMoves += MovePolygon(id, points map {case (h,w) => MovePoint(w + 1, h + 1)})
+        }
+      }
+			writeMoves(writer, nextMoves.result)
 		}
 		catch {
 			case e: Throwable => {
@@ -127,7 +131,7 @@ class DotsGamePlayer(
 		}
 	}
 
-	def writeMoves(writer: Writer, moves: Seq[Move], previousMoves: mutable.HashSet[String]): Unit = {
+	def writeMoves(writer: Writer, moves: Seq[Move]): Unit = {
 		moves foreach {
 			case MoveDot(id, MovePoint(x, y)) => writePoint(writer, x, y)
 			case MovePolygon(id, points) => {

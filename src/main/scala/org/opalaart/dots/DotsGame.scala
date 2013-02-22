@@ -1,6 +1,8 @@
 package org.opalaart.dots
 
 import collection.mutable.ArrayBuffer
+import collection.mutable.HashSet
+import annotation.tailrec
 
 trait Color {
 	override def toString: String = super.toString.split('.').last.split('$').head
@@ -31,6 +33,8 @@ case class Dot(h: Int, w: Int, var color: Color = WHITE)(private val board: Dots
 }
 
 case class Edge(source: Dot, target: Dot, var color: Color = WHITE, var taken: Boolean = false) {
+  
+  val length:Int = Math.abs(target.h-source.h)+Math.abs(target.w-source.w)
     
 	def adjust {
 		if (!taken && color!=GRAY) {
@@ -224,7 +228,7 @@ object DotsGameRules {
 
 class DotsGame(height: Int, width: Int) {
 
-	val board = new DotsBoard(height, width)
+  val board = new DotsBoard(height, width)
 
 	private var counter = 0;
 
@@ -306,36 +310,62 @@ class DotsGame(height: Int, width: Int) {
 		dots
 	}
 
-	def chooseNextMoveFor(color: Color): Option[(Int, Int)] = {
+	def chooseNextMoveFor(color: Color): (Int, Int) = {
 		val dot = if (counter==0){
 			board.dot(0,0)
 		} else {
-      board.dotsOfOtherPlayer(color) flatMap (dot => dot.adjacent) filter (dot => dot.color==BLACK) maxBy (dot => score1(dot,color))
+      board.dotsOfOtherPlayer(color) flatMap (dot => dot.adjacent) filter (dot => dot.color==BLACK) maxBy (dot => score(dot,color))
 		}
 		take(dot,color)
-		Some((dot.h, dot.w))
+		(dot.h, dot.w)
 	}
   
-  def score1(dot:Dot,color:Color):Int = {
+  def score(dot:Dot,color:Color):Int = {
     val score:Int = dot.edges.map (edge => edge.color match {
-      case c if c==color => 1+(Math.random()*3).toInt
-      case BLACK => 1+(Math.random()*3).toInt
+      case c if c==color => edge.length
+      case BLACK => 3
       case WHITE => 0
       case GRAY => -3
-      case _ => 1
+      case _ => 2*edge.length
     }).sum
-    score
+    score/2+(Math.random*(score/2)).toInt
   }
 
-  def score2(dot:Dot,color:Color):Int = {
-    val score:Int = dot.adjacent.map (dot => dot.color match {
-      case c if c==color => (Math.random()*10).toInt
-      case BLACK => 1
-      case WHITE => (Math.random()*10).toInt
-      case GRAY => 0
-      case _ => 10
-    }).sum
-    score
+  def tryFindPolygon(h:Int, w:Int, color:Color): Option[Seq[(Int, Int)]] = {
+      /*val dot = board.dot(h,w)
+      try {
+        val paths = dfs(List(dot),color)
+        val path = paths maxBy (_.size) map (dot => (dot.h,dot.w))
+        connect(path,color)
+        Some(path)
+      }
+      catch {
+        case e:PolygonFoundException => Some(e.path map (dot => (dot.h,dot.w)))
+        case e:Exception => None
+      } */
+      None
   }
+  
+  final def dfs(path:List[Dot],color:Color):Set[List[Dot]] = {
+    val dot = path.head
+    val dots:Set[Dot] = dot.edges filter (edge => edge.length>1 && edge.color==color && edge.target.color==color) map (_.target) 
+    val paths:Set[List[Dot]] = dots flatMap {
+      newdot => {
+        if(path.contains(newdot)){
+          //throw new PolygonFoundException(path)
+          Set[List[Dot]](path)
+        } else {
+          if(path.size<10) {
+            dfs(newdot :: path, color)
+          } else {
+            Set.empty[List[Dot]]
+          }
+        }
+      }
+    }
+    paths
+  }
+  
+  class PolygonFoundException(val path:List[Dot]) extends Exception
 
 }
